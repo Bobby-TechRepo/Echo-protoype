@@ -14,12 +14,15 @@ import io.bsoft.echo.save.LevelProgress;
 /** Level complete summary (spec §45) with challenge results and best comparisons. */
 public final class ResultsOverlay {
 
+    public static final String FEEDBACK_URL = "https://docs.google.com/forms/d/e/1FAIpQLScP68-JNdRYUPp1i48kFkOim1yDjSR1hZfcT36TTVpKA3gkKA/viewform?usp=header";
+
     private final Assets assets;
     private final UiCanvas canvas;
     private LevelResult result;
     private Array<Challenge> challenges;
     private LevelProgress progress;
     private boolean hasNext;
+    private boolean showFeedbackPrompt;
     private float appear;
 
     public ResultsOverlay(Assets assets, UiCanvas canvas) {
@@ -27,12 +30,37 @@ public final class ResultsOverlay {
         this.canvas = canvas;
     }
 
-    public void show(LevelResult result, Array<Challenge> challenges, LevelProgress progress, boolean hasNext) {
+    public void show(LevelResult result, Array<Challenge> challenges, LevelProgress progress, boolean hasNext,
+                     boolean showFeedbackPrompt) {
         this.result = result;
         this.challenges = challenges;
         this.progress = progress;
         this.hasNext = hasNext;
+        this.showFeedbackPrompt = showFeedbackPrompt;
         this.appear = 0f;
+    }
+
+    public boolean shouldShowFeedbackPrompt() {
+        return showFeedbackPrompt;
+    }
+
+    public boolean handleFeedbackClick(float x, float y) {
+        if (!showFeedbackPrompt) {
+            return false;
+        }
+        float bx = UiCanvas.WIDTH / 2f - 260f;
+        float by = 100f;
+        float bw = 520f;
+        float bh = 120f;
+        if (x >= bx && x <= bx + bw && y >= by && y <= by + bh) {
+            openFeedbackLink();
+            return true;
+        }
+        return false;
+    }
+
+    public void openFeedbackLink() {
+        Gdx.net.openURI(FEEDBACK_URL);
     }
 
     public void update(float delta) {
@@ -76,13 +104,33 @@ public final class ResultsOverlay {
         y -= 30f;
         boolean isAndroid = Gdx.app.getType() == Application.ApplicationType.Android;
         String prompt;
-        if (isAndroid) {
+        if (showFeedbackPrompt) {
+            if (isAndroid) {
+                prompt = hasNext ? "Next level     Retry     Level select     Feedback" : "Retry     Level select     Feedback";
+            } else {
+                prompt = hasNext ? "[ENTER] Next level     [R] Retry     [L] Level select     [F] Feedback"
+                        : "[R] Retry     [L] Level select     [F] Feedback";
+            }
+        } else if (isAndroid) {
             prompt = hasNext ? "Next level     Retry     Level select" : "Retry     Level select";
         } else {
             prompt = hasNext ? "[ENTER] Next level     [R] Retry     [L] Level select"
                     : "[R] Retry     [L] Level select";
         }
         canvas.text(assets.font, prompt, cx, Math.max(y, 60f), Align.center, Palette.UI_TEXT, appear);
+
+        if (showFeedbackPrompt) {
+            float boxX = cx - 260f;
+            float boxY = 74f;
+            float boxW = 520f;
+            float boxH = 120f;
+            canvas.rect(boxX, boxY, boxW, boxH, Color.BLACK, 0.78f * appear);
+            canvas.rect(boxX + 10f, boxY + 10f, boxW - 20f, boxH - 20f, Palette.PLATE_ACTIVE, 0.18f * appear);
+            canvas.text(assets.fontLarge, "Thanks for playing!", cx, boxY + boxH - 34f, Align.center, Palette.UI_TEXT, appear);
+            canvas.textWrapped(assets.font, "Please share your gameplay feedback. Tap or press F to open the survey.",
+                    cx, boxY + 58f, boxW - 32f, Palette.UI_TEXT, appear);
+            canvas.text(assets.font, "Open feedback form", cx, boxY + 24f, Align.center, Palette.EXIT, appear);
+        }
         canvas.end();
     }
 

@@ -201,6 +201,10 @@ public final class GameplayScreen extends ScreenAdapter implements GameEventList
                     canvas.viewport().unproject(temp.set(tx, ty));
                     float cx = UiCanvas.WIDTH / 2f;
 
+                    if (results.shouldShowFeedbackPrompt() && results.handleFeedbackClick(temp.x, temp.y)) {
+                        return;
+                    }
+
                     if (temp.y < 120f) {
                         if (hasNext && temp.x < cx - 100f) game.startLevel(levelIndex + 1);
                         else if (temp.x > cx - 100f && temp.x < cx + 100f) {
@@ -209,6 +213,9 @@ public final class GameplayScreen extends ScreenAdapter implements GameEventList
                         }
                         else if (temp.x > cx + 100f) game.showLevelSelect();
                     }
+                }
+                if (results.shouldShowFeedbackPrompt() && Gdx.input.isKeyJustPressed(Input.Keys.F)) {
+                    results.openFeedbackLink();
                 }
                 input.consumePresses();
             }
@@ -224,7 +231,8 @@ public final class GameplayScreen extends ScreenAdapter implements GameEventList
     public void onLevelComplete(LevelResult result) {
         progress = game.save().record(result, levelData.challenges);
         boolean hasNext = levelIndex + 1 < game.levels().size();
-        results.show(result, levelData.challenges, progress, hasNext);
+        boolean allLevelsComplete = !hasNext;
+        results.show(result, levelData.challenges, progress, hasNext, allLevelsComplete);
         setMode(Mode.RESULTS);
         Log.info(TAG, "Level complete: " + result);
     }
